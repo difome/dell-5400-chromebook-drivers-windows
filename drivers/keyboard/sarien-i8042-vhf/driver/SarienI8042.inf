@@ -1,0 +1,59 @@
+[Version]
+Signature="$WINDOWS NT$"
+Class=System
+ClassGuid={4d36e97d-e325-11ce-bfc1-08002be10318}
+Provider=%ProviderName%
+DriverVer=10/08/2026,0.1.0.0
+CatalogFile=SarienI8042.cat
+PnpLockdown=1
+
+[DestinationDirs]
+DefaultDestDir=13
+
+[SourceDisksNames]
+1=%DiskName%,,,
+
+[SourceDisksFiles]
+SarienI8042.sys=1
+
+[Manufacturer]
+%ProviderName%=Standard,NTamd64.10.0...16299
+
+[Standard.NTamd64.10.0...16299]
+%DeviceDesc%=SarienI8042_Install,Root\SarienI8042Vhf
+
+[SarienI8042_Install.NT]
+CopyFiles=DriverCopyFiles
+
+[SarienI8042_Install.NT.HW]
+AddReg=SarienI8042_VhfFilter
+
+[SarienI8042_VhfFilter]
+HKR,,"LowerFilters",0x00010000,"vhf"
+
+[DriverCopyFiles]
+SarienI8042.sys
+
+[SarienI8042_Install.NT.Services]
+AddService=SarienI8042,0x00000002,SarienI8042_Service
+
+[SarienI8042_Service]
+DisplayName=%ServiceDesc%
+ServiceType=1
+StartType=3
+ErrorControl=1
+ServiceBinary=%13%\SarienI8042.sys
+Dependencies=Vhf
+
+[SarienI8042_Install.NT.Wdf]
+KmdfService=SarienI8042,SarienI8042_Wdf
+
+[SarienI8042_Wdf]
+KmdfLibraryVersion=1.15
+
+[Strings]
+ProviderName="Sarien Drivers Project"
+DiskName="Sarien i8042 VHF Driver Installation Disk"
+DeviceDesc="Sarien emulated i8042 keyboard source"
+ServiceDesc="Sarien i8042 to Virtual HID keyboard"
+

@@ -1,0 +1,11 @@
+.vs/
+.tools/
+packages/
+artifacts/
+driver/x64/
+driver/Debug/
+driver/Release/
+*.user
+*.pdb
+*.log
+msbuild.preprocessed.xml
