@@ -1,5 +1,28 @@
 # Sarien i8042 → Virtual HID keyboard prototype
 
+> **Experimental branch:** `experimental/top-row-modes`. The source and builds
+> below are intentionally preserved outside the official GitHub Releases.
+
+## Experimental top-row builds
+
+- [ActionKeys — Windows 10 x64](experimental-builds/SarienI8042-ActionKeys-Release-x64.zip):
+  ChromeOS-style browser, brightness, media and volume actions. The snapshot
+  position is emitted as a real keyboard Print Screen usage.
+- [FunctionKeys — Windows 10 x64](experimental-builds/SarienI8042-FunctionKeys-Release-x64.zip):
+  the action positions are emitted as F1-F9 and F12. F10/F11 already arrive as
+  ordinary function keys.
+
+Fn is handled inside the EC and is not visible to this Windows driver, so the
+FunctionKeys package changes those positions unconditionally. To switch modes,
+install the other ZIP and reboot. Keep an external USB keyboard connected.
+
+The source can build either package with:
+
+```powershell
+.\scripts\build-driver.ps1 -Configuration Release -TopRowMode ActionKeys
+.\scripts\build-driver.ps1 -Configuration Release -TopRowMode FunctionKeys
+```
+
 > **Windows 10 x64 build:**
 > [Download Sarien keyboard driver v0.1.0](https://github.com/difome/dell-5400-chromebook-drivers-windows/releases/download/keyboard-v0.1.0/SarienI8042-Release-x64.zip)
 >

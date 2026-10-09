@@ -1,5 +1,9 @@
 # Windows drivers for Dell Latitude 5400 Chromebook (Sarien)
 
+> **Branch notice:** this is the `experimental/top-row-modes` branch. It keeps
+> the unreleased ActionKeys and FunctionKeys keyboard variants for testing.
+> The official v0.1 source and release remain on `main`.
+
 Experimental Windows drivers for the Dell Latitude 5400 Chromebook, ChromiumOS
 board name **Sarien**.
 
@@ -55,6 +59,18 @@ Get-CimInstance Win32_BaseBoard | Select-Object Manufacturer, Product
 ```
 
 ## Drivers
+
+### Experimental keyboard builds in this branch
+
+- [ActionKeys build](drivers/keyboard/sarien-i8042-vhf/experimental-builds/SarienI8042-ActionKeys-Release-x64.zip)
+  keeps the Chromebook-style action row and emits the snapshot position as
+  Windows Print Screen.
+- [FunctionKeys build](drivers/keyboard/sarien-i8042-vhf/experimental-builds/SarienI8042-FunctionKeys-Release-x64.zip)
+  converts the Chromebook action positions to F1-F9 and F12. F10/F11 already
+  arrive as normal function keys.
+
+These files are intentionally stored only in this branch and are not an
+official GitHub Release. Install only one variant at a time.
 
 ### Internal keyboard
 

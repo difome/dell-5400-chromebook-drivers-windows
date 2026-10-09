@@ -56,7 +56,6 @@ SarienSet1ToConsumer(_In_ UCHAR scanCode, _In_ BOOLEAN extended)
     case 0x10: return 0x00B6; /* Scan Previous Track */
     case 0x11: return 0x0230; /* AC Full Screen View */
     case 0x12: return 0x029F; /* AC Desktop Show All Windows */
-    case 0x13: return 0x0065; /* Snapshot */
     case 0x14: return 0x0070; /* Display Brightness Decrement */
     case 0x15: return 0x006F; /* Display Brightness Increment */
     case 0x19: return 0x00B5; /* Scan Next Track */
@@ -69,6 +68,37 @@ SarienSet1ToConsumer(_In_ UCHAR scanCode, _In_ BOOLEAN extended)
     case 0x6A: return 0x0224; /* AC Back */
     default: return 0;
     }
+}
+
+/*
+ * Optional Sarien-specific mode for users who want the printed F labels to
+ * win over ChromeOS action-key behavior. Fn itself is handled by the EC and
+ * normally never reaches the host, so this translates the action scan codes
+ * that the host actually receives.
+ */
+static UCHAR
+SarienActionToFunctionKey(_In_ UCHAR scanCode, _In_ BOOLEAN extended)
+{
+#if SARIEN_FUNCTION_ROW_MODE
+    if (!extended) return 0;
+    switch (scanCode) {
+    case 0x6A: return 0x3A; /* Back -> F1 */
+    case 0x67: return 0x3B; /* Refresh -> F2 */
+    case 0x11: return 0x3C; /* Fullscreen -> F3 */
+    case 0x12: return 0x3D; /* Overview -> F4 */
+    case 0x14: return 0x3E; /* Brightness down -> F5 */
+    case 0x15: return 0x3F; /* Brightness up -> F6 */
+    case 0x20: return 0x40; /* Mute -> F7 */
+    case 0x2E: return 0x41; /* Volume down -> F8 */
+    case 0x30: return 0x42; /* Volume up -> F9 */
+    case 0x13: return 0x45; /* Snapshot -> F12 */
+    default: return 0;
+    }
+#else
+    UNREFERENCED_PARAMETER(scanCode);
+    UNREFERENCED_PARAMETER(extended);
+    return 0;
+#endif
 }
 
 static BOOLEAN
@@ -189,6 +219,7 @@ SarienSet1ToHid(_In_ UCHAR scanCode, _In_ BOOLEAN extended)
 {
     if (extended) {
         switch (scanCode) {
+        case 0x13: return 0x46; /* Chromebook Snapshot -> Print Screen */
         case 0x1C: return 0x58; /* Keypad Enter */
         case 0x1D: return 0xE4; /* Right Control */
         case 0x35: return 0x54; /* Keypad / */
@@ -351,14 +382,20 @@ SarienConsumeScanCode(_Inout_ PDEVICE_CONTEXT context, _In_ UCHAR scanCode)
         return;
     }
 
-    consumerUsage = SarienSet1ToConsumer(scanCode, context->ExtendedPending);
+    usage = SarienActionToFunctionKey(scanCode, context->ExtendedPending);
+    consumerUsage = (usage == 0) ?
+        SarienSet1ToConsumer(scanCode, context->ExtendedPending) : 0;
 #if DBG
     KdPrintEx((DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL,
         "SarienI8042: set1 scan %s%s%02X\n",
         context->ExtendedPending ? "E0 " : "",
         released ? "break " : "make ", scanCode));
 #endif
-    if (consumerUsage != 0) {
+    if (usage != 0) {
+        if (SarienUpdateReport(context, usage, released)) {
+            SarienSubmitKeyboardReport(context);
+        }
+    } else if (consumerUsage != 0) {
         USHORT nextUsage = released ? 0 : consumerUsage;
         if (context->ConsumerReport.ConsumerUsage != nextUsage) {
             context->ConsumerReport.ConsumerUsage = nextUsage;

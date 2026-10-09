@@ -24,6 +24,9 @@
 #define SARIEN_MAX_KEYS 6
 #define SARIEN_KEYBOARD_REPORT_ID 1
 #define SARIEN_CONSUMER_REPORT_ID 2
+#ifndef SARIEN_FUNCTION_ROW_MODE
+#define SARIEN_FUNCTION_ROW_MODE 0
+#endif
 
 #pragma pack(push, 1)
 typedef struct _SARIEN_KEYBOARD_REPORT {

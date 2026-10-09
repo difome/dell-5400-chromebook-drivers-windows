@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('Debug','Release')][string]$Configuration = 'Debug'
+    [ValidateSet('Debug','Release')][string]$Configuration = 'Debug',
+    [ValidateSet('ActionKeys','FunctionKeys')][string]$TopRowMode = 'ActionKeys'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -27,7 +28,8 @@ if (!(Test-Path -LiteralPath $nuget)) {
 & $nuget restore (Join-Path $projectRoot 'packages.config') -PackagesDirectory (Join-Path $projectRoot 'packages') -NonInteractive -Source 'https://api.nuget.org/v3/index.json'
 if ($LASTEXITCODE -ne 0) { throw "WDK NuGet restore failed with exit code $LASTEXITCODE" }
 
-& $msbuild $solution /m /t:Rebuild "/p:Configuration=$Configuration" /p:Platform=x64 /v:minimal
+$functionRowMode = if ($TopRowMode -eq 'FunctionKeys') { 1 } else { 0 }
+& $msbuild $solution /m /t:Rebuild "/p:Configuration=$Configuration" /p:Platform=x64 "/p:SarienFunctionRowMode=$functionRowMode" /v:minimal
 if ($LASTEXITCODE -ne 0) { throw "Driver build failed with exit code $LASTEXITCODE" }
 
 $driverPackage = Join-Path $projectRoot "driver\x64\$Configuration\SarienI8042"
@@ -45,10 +47,12 @@ $devcon = Get-ChildItem (Join-Path $projectRoot 'packages') -Filter devcon.exe -
 if (!$devcon) { throw 'The x64 DevCon test tool was not found in the restored WDK package.' }
 Copy-Item -LiteralPath $devcon -Destination (Join-Path $driverPackage 'devcon.exe') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'install-test.ps1') -Destination $driverPackage -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'INSTALL-KEYBOARD.ps1') -Destination $driverPackage -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'uninstall-test.ps1') -Destination $driverPackage -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'collect-diagnostics.ps1') -Destination $driverPackage -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'README.md') -Destination $driverPackage -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'INSTALL-RU.md') -Destination $driverPackage -Force
+"Top row mode: $TopRowMode" | Set-Content -LiteralPath (Join-Path $driverPackage 'TOP-ROW-MODE.txt') -Encoding ASCII
 $symbols = Join-Path $projectRoot "driver\x64\$Configuration\SarienI8042.pdb"
 if (Test-Path -LiteralPath $symbols) {
     Copy-Item -LiteralPath $symbols -Destination $driverPackage -Force
@@ -56,7 +60,7 @@ if (Test-Path -LiteralPath $symbols) {
 
 $artifacts = Join-Path $projectRoot 'artifacts'
 New-Item -ItemType Directory -Path $artifacts -Force | Out-Null
-$archive = Join-Path $artifacts "SarienI8042-$Configuration-x64.zip"
+$archive = Join-Path $artifacts "SarienI8042-$TopRowMode-$Configuration-x64.zip"
 Compress-Archive -Path (Join-Path $driverPackage '*') -DestinationPath $archive -Force
 
 $outputs = Get-ChildItem (Join-Path $PSScriptRoot '..\driver') -Recurse -File |

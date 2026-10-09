@@ -23,11 +23,12 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup>
     <OutDir>$(IntDir)</OutDir>
+    <SarienFunctionRowMode Condition="'$(SarienFunctionRowMode)'==''">0</SarienFunctionRowMode>
     <Inf2CatUseLocalTime>true</Inf2CatUseLocalTime>
   </PropertyGroup>
   <ItemDefinitionGroup>
-    <ClCompile><WarningLevel>Level4</WarningLevel><TreatWarningAsError>true</TreatWarningAsError><PreprocessorDefinitions>%(PreprocessorDefinitions);_UNICODE;UNICODE;POOL_NX_OPTIN=1</PreprocessorDefinitions><AdditionalIncludeDirectories>$(KMDF_INC_PATH);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories></ClCompile>
-    <Inf><TimeStamp>0.1.0.0</TimeStamp></Inf>
+    <ClCompile><WarningLevel>Level4</WarningLevel><TreatWarningAsError>true</TreatWarningAsError><PreprocessorDefinitions>%(PreprocessorDefinitions);_UNICODE;UNICODE;POOL_NX_OPTIN=1;SARIEN_FUNCTION_ROW_MODE=$(SarienFunctionRowMode)</PreprocessorDefinitions><AdditionalIncludeDirectories>$(KMDF_INC_PATH);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories></ClCompile>
+    <Inf><TimeStamp>0.2.0.0</TimeStamp></Inf>
     <Link><AdditionalDependencies>VhfKm.lib;%(AdditionalDependencies)</AdditionalDependencies></Link>
     <DriverSign><FileDigestAlgorithm>sha256</FileDigestAlgorithm></DriverSign>
   </ItemDefinitionGroup>
