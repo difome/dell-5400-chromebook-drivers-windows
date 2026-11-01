@@ -48,6 +48,7 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'install-test.ps1') -Destination
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'uninstall-test.ps1') -Destination $driverPackage -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'manager.ps1') -Destination $driverPackage -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'start-manager.cmd') -Destination $driverPackage -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'cleanup.ps1') -Destination $driverPackage -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'collect-diagnostics.ps1') -Destination $driverPackage -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'README.md') -Destination $driverPackage -Force
 $symbols = Join-Path $projectRoot "driver\x64\$Configuration\SarienI8042.pdb"

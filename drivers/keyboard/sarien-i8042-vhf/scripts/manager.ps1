@@ -51,6 +51,8 @@ function Show-Header {
     Write-Host "  5) Uninstall driver" -ForegroundColor White
     Write-Host "  6) Disable test signing" -ForegroundColor White
     Write-Host "  7) Reboot" -ForegroundColor White
+    Write-Host "  8) Clean up devices (keep driver)" -ForegroundColor White
+    Write-Host "  9) Remove everything" -ForegroundColor White
     Write-Host "  0) Exit" -ForegroundColor White
     Write-Host ""
 }
@@ -97,6 +99,18 @@ while ($true) {
         }
         '7' {
             if ((Read-Host "Reboot now? (y/n)") -eq 'y') { Restart-Computer -Force }
+        }
+        '8' {
+            if (Test-Path '.\cleanup.ps1') { & '.\cleanup.ps1' } else { Write-Host "cleanup.ps1 not found" -ForegroundColor Red }
+        }
+        '9' {
+            if (Test-Path '.\cleanup.ps1') {
+                if ((Read-Host "Remove the driver package too? (y/n)") -eq 'y') {
+                    & '.\cleanup.ps1' -RemoveDriverPackage
+                } else {
+                    & '.\cleanup.ps1'
+                }
+            } else { Write-Host "cleanup.ps1 not found" -ForegroundColor Red }
         }
         '0' { exit 0 }
         default { Write-Host "Unknown option" -ForegroundColor Red }
