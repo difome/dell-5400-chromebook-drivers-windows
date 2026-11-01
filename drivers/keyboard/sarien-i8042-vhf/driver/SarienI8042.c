@@ -172,7 +172,17 @@ SarienInitializeController(VOID)
         I8042_COMMAND_ENABLE_KEYBOARD);
     if (!SarienWaitForInputEmpty()) return FALSE;
 
-    return SarienSendKeyboardCommand(AT_KEYBOARD_ENABLE_SCANNING);
+    if (!SarienSendKeyboardCommand(AT_KEYBOARD_ENABLE_SCANNING)) return FALSE;
+
+    /*
+     * Ask the EC for typematic repeats. Holds then keep producing bytes, which
+     * lets the stuck-key watchdog tell a real hold from a lost break code.
+     */
+    if (!SarienSendKeyboardCommand(AT_KEYBOARD_SET_TYPEMATIC)) return FALSE;
+    if (SarienWaitForInputEmpty()) {
+        WRITE_PORT_UCHAR((PUCHAR)(ULONG_PTR)I8042_DATA_PORT, 0x00);
+    }
+    return TRUE;
 }
 
 static VOID
@@ -207,6 +217,7 @@ SarienSet1ToHid(_In_ UCHAR scanCode, _In_ BOOLEAN extended)
         case 0x5B: return 0xE3; /* Left GUI / ChromeOS Search */
         case 0x5C: return 0xE7; /* Right GUI */
         case 0x5D: return 0x65; /* Application */
+        case 0x11: return 0x44; /* Fullscreen -> F11 */
         default: return 0;
         }
     }
@@ -324,6 +335,43 @@ SarienSubmitConsumerReport(_Inout_ PDEVICE_CONTEXT context)
 }
 
 static VOID
+SarienStartMacro(_Inout_ PDEVICE_CONTEXT context, _In_ UCHAR modifiers, _In_ UCHAR key)
+{
+    context->MacroModifiers = modifiers;
+    context->MacroKey = key;
+    context->MacroStep = 1;
+}
+
+static VOID
+SarienRunMacro(_Inout_ PDEVICE_CONTEXT context)
+{
+    if (context->MacroStep == 1) {
+        context->KeyboardReport.Modifiers |= context->MacroModifiers;
+        (void)SarienUpdateReport(context, context->MacroKey, FALSE);
+        SarienSubmitKeyboardReport(context);
+        context->MacroStep = 2;
+    } else if (context->MacroStep == 2) {
+        (void)SarienUpdateReport(context, context->MacroKey, TRUE);
+        context->KeyboardReport.Modifiers &= (UCHAR)~context->MacroModifiers;
+        context->MacroModifiers = 0;
+        SarienSubmitKeyboardReport(context);
+        context->MacroStep = 0;
+    }
+}
+
+static BOOLEAN
+SarienAnyKeyHeld(_In_ PDEVICE_CONTEXT context)
+{
+    ULONG index;
+
+    if (context->KeyboardReport.Modifiers != 0) return TRUE;
+    for (index = 0; index < SARIEN_MAX_KEYS; ++index) {
+        if (context->KeyboardReport.Keys[index] != 0) return TRUE;
+    }
+    return FALSE;
+}
+
+static VOID
 SarienConsumeScanCode(_Inout_ PDEVICE_CONTEXT context, _In_ UCHAR scanCode)
 {
     UCHAR usage;
@@ -352,6 +400,23 @@ SarienConsumeScanCode(_Inout_ PDEVICE_CONTEXT context, _In_ UCHAR scanCode)
     }
 
     consumerUsage = SarienSet1ToConsumer(scanCode, context->ExtendedPending);
+
+    /*
+     * Overview and Snapshot have no dedicated HID usage, so they are replayed
+     * as the desktop shortcuts Windows expects.
+     */
+    if (context->ExtendedPending && !released) {
+        if (scanCode == 0x12) {
+            context->ExtendedPending = FALSE;
+            SarienStartMacro(context, 0x08, 0x2B); /* Left GUI + Tab */
+            return;
+        }
+        if (scanCode == 0x13) {
+            context->ExtendedPending = FALSE;
+            SarienStartMacro(context, 0x08 | 0x02, 0x16); /* Left GUI + Shift + S */
+            return;
+        }
+    }
 #if DBG
     KdPrintEx((DPFLTR_IHVDRIVER_ID, DPFLTR_TRACE_LEVEL,
         "SarienI8042: set1 scan %s%s%02X\n",
@@ -384,18 +449,44 @@ SarienEvtPollTimer(_In_ WDFTIMER timer)
 {
     PDEVICE_CONTEXT context = SarienGetContext(WdfTimerGetParentObject(timer));
     ULONG limit;
+    BOOLEAN readAny = FALSE;
+    ULONG64 now;
 
-    for (limit = 0; limit < 32; ++limit) {
+    for (limit = 0; limit < 64; ++limit) {
         UCHAR status = READ_PORT_UCHAR((PUCHAR)(ULONG_PTR)I8042_STATUS_PORT);
+        UCHAR byte;
+
         if ((status & I8042_STATUS_OUTPUT_FULL) == 0) break;
-        if ((status & I8042_STATUS_AUX_DATA) != 0) {
-            (void)READ_PORT_UCHAR((PUCHAR)(ULONG_PTR)I8042_DATA_PORT);
+        byte = READ_PORT_UCHAR((PUCHAR)(ULONG_PTR)I8042_DATA_PORT);
+        if ((status & I8042_STATUS_AUX_DATA) != 0) continue;
+        /* Command acknowledgements and echo are not scan codes. */
+        if (byte == AT_KEYBOARD_ACK || byte == AT_KEYBOARD_RESEND ||
+            byte == 0x00 || byte == 0xEE) {
             continue;
         }
-        SarienConsumeScanCode(context,
-            READ_PORT_UCHAR((PUCHAR)(ULONG_PTR)I8042_DATA_PORT));
+        SarienConsumeScanCode(context, byte);
         ++context->BytesRead;
+        readAny = TRUE;
     }
+
+    now = KeQueryInterruptTime();
+    if (readAny) {
+        context->LastByteTick = now;
+    } else if (context->MacroStep == 0 && context->LastByteTick != 0 &&
+               SarienAnyKeyHeld(context) &&
+               (now - context->LastByteTick) > SARIEN_STUCK_KEY_TIMEOUT) {
+        /*
+         * No byte at all while keys are still marked pressed: the EC dropped a
+         * break code. Release everything so Windows stops auto-repeating.
+         */
+        RtlZeroMemory(context->KeyboardReport.Keys, SARIEN_MAX_KEYS);
+        context->KeyboardReport.Modifiers = 0;
+        SarienSubmitKeyboardReport(context);
+        ++context->StuckKeysReleased;
+        context->LastByteTick = now;
+    }
+
+    SarienRunMacro(context);
 }
 
 NTSTATUS

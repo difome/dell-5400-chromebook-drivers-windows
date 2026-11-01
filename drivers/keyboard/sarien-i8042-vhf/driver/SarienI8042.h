@@ -19,8 +19,11 @@
 #define I8042_COMMAND_BYTE_AUX_DISABLED 0x20
 #define I8042_COMMAND_BYTE_TRANSLATE 0x40
 #define AT_KEYBOARD_ENABLE_SCANNING 0xF4
+#define AT_KEYBOARD_SET_TYPEMATIC 0xF3
 #define AT_KEYBOARD_ACK 0xFA
 #define AT_KEYBOARD_RESEND 0xFE
+/* 1.2 s of complete silence while keys are held means a break code was lost. */
+#define SARIEN_STUCK_KEY_TIMEOUT 12000000ULL
 #define SARIEN_MAX_KEYS 6
 #define SARIEN_KEYBOARD_REPORT_ID 1
 #define SARIEN_CONSUMER_REPORT_ID 2
@@ -46,6 +49,11 @@ typedef struct _DEVICE_CONTEXT {
     SARIEN_CONSUMER_REPORT ConsumerReport;
     BOOLEAN ExtendedPending;
     UCHAR PauseBytesToSkip;
+    ULONG64 LastByteTick;
+    UCHAR MacroStep;
+    UCHAR MacroModifiers;
+    UCHAR MacroKey;
+    ULONG StuckKeysReleased;
     ULONG BytesRead;
     ULONG ReportsSubmitted;
     ULONG UnmappedScanCodes;

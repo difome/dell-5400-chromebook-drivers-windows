@@ -60,11 +60,11 @@ Get-CimInstance Win32_BaseBoard | Select-Object Manufacturer, Product
 
 Sarien i8042 to Virtual HID Framework keyboard driver for Windows 10 x64.
 
-- **Version:** v0.2.0
+- **Version:** v0.3.0
 - **Status:** experimental, test-signed
 - **Source:** [drivers/keyboard/sarien-i8042-vhf](drivers/keyboard/sarien-i8042-vhf/)
-- **Download:** [SarienI8042-Release-x64.zip](https://github.com/difome/dell-5400-chromebook-drivers-windows/releases/download/keyboard-v0.2.0/SarienI8042-Release-x64.zip)
-- **Release:** [Keyboard driver v0.2.0](https://github.com/difome/dell-5400-chromebook-drivers-windows/releases/tag/keyboard-v0.2.0) - Secure Boot fix + interactive manager
+- **Download:** [SarienI8042-Release-x64.zip](https://github.com/difome/dell-5400-chromebook-drivers-windows/releases/download/keyboard-v0.3.0/SarienI8042-Release-x64.zip)
+- **Release:** [Keyboard driver v0.3.0](https://github.com/difome/dell-5400-chromebook-drivers-windows/releases/tag/keyboard-v0.3.0) - stuck-key fix, top-row mapping
 
 More drivers will be added to this list when their source code and tested build
 packages are ready.
